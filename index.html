@@ -119,6 +119,7 @@
         let bluetoothDevice;
         let txCharacteristic;
         let lastPrediction = "";
+        let isCooldown = false;
 
         const UART_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
         const TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // Notify from Arduino
@@ -167,11 +168,16 @@
             const value = new TextDecoder().decode(rawData).trim();
             console.log('Decoded value:', value);
 
-            if (value && value !== lastPrediction) {
-                document.getElementById('prediction').textContent = value;
-                updateUI(value);
-                lastPrediction = value;
-            }
+            if (!value || isCooldown || value === lastPrediction) return;
+
+            document.getElementById('prediction').textContent = value;
+            updateUI(value);
+            lastPrediction = value;
+
+            isCooldown = true;
+            setTimeout(() => {
+                isCooldown = false;
+            }, 2000);  // 2 seconds cooldown
         }
 
         function updateUI(prediction) {
@@ -195,7 +201,7 @@
                 setTimeout(() => {
                     element.style.display = 'none';
                     ring.style.display = 'none';
-                }, 2500);
+                }, 2000); // same as cooldown
             }
 
             if (prediction === 'kisamiZuki') {
@@ -208,7 +214,9 @@
         function playSound(src) {
             const audio = new Audio(`/static/${src}`);
             audio.volume = 0.5;
-            audio.play();
+            audio.play().catch(err => {
+                console.warn("Audio play failed:", err);
+            });
         }
     </script>
 </body>
