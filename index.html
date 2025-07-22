@@ -120,38 +120,26 @@
         let txCharacteristic;
         let lastPrediction = "";
         let isCooldown = false;
+        let bleBuffer = "";
 
         const UART_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-        const TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // Notify from Arduino
+        const TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
 
         document.getElementById('connectBtn').addEventListener('click', connectBluetooth);
 
         function connectBluetooth() {
-            console.log("Requesting Bluetooth device...");
             navigator.bluetooth.requestDevice({
                 filters: [{ namePrefix: "Nano" }],
                 optionalServices: [UART_SERVICE_UUID]
             })
-            .then(device => {
-                console.log('Device selected:', device.name);
-                bluetoothDevice = device;
-                return device.gatt.connect();
-            })
-            .then(server => {
-                console.log('Connected to GATT server');
-                return server.getPrimaryService(UART_SERVICE_UUID);
-            })
-            .then(service => {
-                console.log('Service found');
-                return service.getCharacteristic(TX_CHARACTERISTIC_UUID);
-            })
+            .then(device => device.gatt.connect())
+            .then(server => server.getPrimaryService(UART_SERVICE_UUID))
+            .then(service => service.getCharacteristic(TX_CHARACTERISTIC_UUID))
             .then(characteristic => {
-                console.log('Characteristic found');
                 txCharacteristic = characteristic;
                 return txCharacteristic.startNotifications();
             })
             .then(() => {
-                console.log('Notifications started');
                 txCharacteristic.addEventListener('characteristicvaluechanged', handleBluetoothData);
                 document.getElementById('prediction').textContent = 'Connected via Bluetooth!';
             })
@@ -162,22 +150,42 @@
         }
 
         function handleBluetoothData(event) {
-            const rawData = event.target.value;
-            console.log('Raw data received:', rawData);
+            const value = new TextDecoder().decode(event.target.value);
+            bleBuffer += value;
 
-            const value = new TextDecoder().decode(rawData).trim();
-            console.log('Decoded value:', value);
+            if (bleBuffer.includes("Starting inferencing")) {
+                const prediction = extractHighestPrediction(bleBuffer);
+                bleBuffer = "";
 
-            if (!value || isCooldown || value === lastPrediction) return;
+                if (prediction && prediction !== lastPrediction && !isCooldown) {
+                    document.getElementById('prediction').textContent = prediction;
+                    updateUI(prediction);
+                    lastPrediction = prediction;
 
-            document.getElementById('prediction').textContent = value;
-            updateUI(value);
-            lastPrediction = value;
+                    isCooldown = true;
+                    setTimeout(() => isCooldown = false, 2000);
+                }
+            }
+        }
 
-            isCooldown = true;
-            setTimeout(() => {
-                isCooldown = false;
-            }, 2000);  // 2 seconds cooldown
+        function extractHighestPrediction(text) {
+            const lines = text.split('\n');
+            let maxLabel = '';
+            let maxVal = -1;
+
+            for (let line of lines) {
+                const match = line.match(/([a-zA-Z]+):\s+([0-9.]+)/);
+                if (match) {
+                    const label = match[1];
+                    const value = parseFloat(match[2]);
+                    if (value > maxVal) {
+                        maxVal = value;
+                        maxLabel = label;
+                    }
+                }
+            }
+
+            return maxLabel;
         }
 
         function updateUI(prediction) {
@@ -192,7 +200,7 @@
             function showAndAnimate(element, soundFile) {
                 element.style.display = 'block';
                 element.style.animation = 'none';
-                void element.offsetWidth;  // trigger reflow
+                void element.offsetWidth; // trigger reflow
                 element.style.animation = 'fadeInScale 0.8s ease-out forwards';
 
                 ring.style.display = 'block';
@@ -201,7 +209,7 @@
                 setTimeout(() => {
                     element.style.display = 'none';
                     ring.style.display = 'none';
-                }, 2000); // same as cooldown
+                }, 2000);
             }
 
             if (prediction === 'kisamiZuki') {
