@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Karate Shot Prediction</title>
     <style>
         body {
@@ -122,26 +122,35 @@
 
         const UART_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
         const TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // Notify from Arduino
-        // RX not used here but if needed: '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
 
         document.getElementById('connectBtn').addEventListener('click', connectBluetooth);
 
         function connectBluetooth() {
+            console.log("Requesting Bluetooth device...");
             navigator.bluetooth.requestDevice({
                 filters: [{ namePrefix: "Nano" }],
                 optionalServices: [UART_SERVICE_UUID]
             })
             .then(device => {
+                console.log('Device selected:', device.name);
                 bluetoothDevice = device;
                 return device.gatt.connect();
             })
-            .then(server => server.getPrimaryService(UART_SERVICE_UUID))
-            .then(service => service.getCharacteristic(TX_CHARACTERISTIC_UUID))
+            .then(server => {
+                console.log('Connected to GATT server');
+                return server.getPrimaryService(UART_SERVICE_UUID);
+            })
+            .then(service => {
+                console.log('Service found');
+                return service.getCharacteristic(TX_CHARACTERISTIC_UUID);
+            })
             .then(characteristic => {
+                console.log('Characteristic found');
                 txCharacteristic = characteristic;
                 return txCharacteristic.startNotifications();
             })
             .then(() => {
+                console.log('Notifications started');
                 txCharacteristic.addEventListener('characteristicvaluechanged', handleBluetoothData);
                 document.getElementById('prediction').textContent = 'Connected via Bluetooth!';
             })
@@ -152,7 +161,12 @@
         }
 
         function handleBluetoothData(event) {
-            const value = new TextDecoder().decode(event.target.value).trim();
+            const rawData = event.target.value;
+            console.log('Raw data received:', rawData);
+
+            const value = new TextDecoder().decode(rawData).trim();
+            console.log('Decoded value:', value);
+
             if (value && value !== lastPrediction) {
                 document.getElementById('prediction').textContent = value;
                 updateUI(value);
@@ -172,7 +186,7 @@
             function showAndAnimate(element, soundFile) {
                 element.style.display = 'block';
                 element.style.animation = 'none';
-                void element.offsetWidth;
+                void element.offsetWidth;  // trigger reflow
                 element.style.animation = 'fadeInScale 0.8s ease-out forwards';
 
                 ring.style.display = 'block';
