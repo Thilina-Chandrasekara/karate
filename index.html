@@ -1,231 +1,250 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>Karate Shot Prediction</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(to right, #1a1a1a, #333);
-            color: #fff;
-            text-align: center;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+  <meta charset="UTF-8" />
+  <title>Karate Shot Prediction</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to right, #1a1a1a, #333);
+      color: #fff;
+      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
 
-        h1 {
-            font-size: 3rem;
-            margin-top: 40px;
-            font-family: 'Impact', sans-serif;
-            color: #ffcc00;
-            text-shadow: 2px 2px #000;
-        }
+    h1 {
+      font-size: 3rem;
+      margin-top: 40px;
+      font-family: 'Impact', sans-serif;
+      color: #ffcc00;
+      text-shadow: 2px 2px #000;
+    }
 
-        #connectBtn {
-            margin-top: 10px;
-            padding: 10px 20px;
-            font-size: 1.1rem;
-            border: none;
-            background-color: #007bff;
-            color: white;
-            border-radius: 6px;
-            cursor: pointer;
-        }
+    #connectBtn {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 1.1rem;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
 
-        #prediction {
-            font-size: 2rem;
-            color: #00bfff;
-            margin-top: 20px;
-            font-weight: bold;
-        }
+    #prediction {
+      font-size: 2rem;
+      color: #00bfff;
+      margin-top: 20px;
+      font-weight: bold;
+    }
 
-        .animation-container {
-            margin-top: 40px;
-            height: 240px;
-            position: relative;
-            z-index: 1;
-        }
+    .animation-container {
+      margin-top: 40px;
+      height: 240px;
+      position: relative;
+      z-index: 1;
+    }
 
-        .animation {
-            display: none;
-            margin: 0 auto;
-            width: 220px;
-            height: 220px;
-            background-repeat: no-repeat;
-            background-size: contain;
-            background-position: center;
-            animation: fadeInScale 0.8s ease-out forwards;
-            box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-            border-radius: 12px;
-        }
+    .animation {
+      display: none;
+      margin: 0 auto;
+      width: 220px;
+      height: 220px;
+      background-repeat: no-repeat;
+      background-size: contain;
+      background-position: center;
+      animation: fadeInScale 0.8s ease-out forwards;
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+      border-radius: 12px;
+    }
 
-        .kisamiZuki {
-            background-image: url("/static/kisami.gif");
-        }
+    .kisamiZuki {
+      background-image: url("/static/kisami.gif");
+    }
 
-        .gyakuZuki {
-            background-image: url("/static/gyaku.gif");
-        }
+    .gyakuZuki {
+      background-image: url("/static/gyaku.gif");
+    }
 
-        @keyframes fadeInScale {
-            0% { opacity: 0; transform: scale(0.85); }
-            50% { opacity: 1; transform: scale(1.05); }
-            100% { opacity: 1; transform: scale(1); }
-        }
+    @keyframes fadeInScale {
+      0% { opacity: 0; transform: scale(0.85); }
+      50% { opacity: 1; transform: scale(1.05); }
+      100% { opacity: 1; transform: scale(1); }
+    }
 
-        .effect-ring {
-            margin-top: 20px;
-            width: 180px;
-            height: 180px;
-            border-radius: 50%;
-            border: 6px solid #ff0000;
-            animation: glow 1s infinite alternate;
-            margin-left: auto;
-            margin-right: auto;
-        }
+    .effect-ring {
+      margin-top: 20px;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      border: 6px solid #ff0000;
+      animation: glow 1s infinite alternate;
+      margin-left: auto;
+      margin-right: auto;
+    }
 
-        @keyframes glow {
-            from { box-shadow: 0 0 10px red; }
-            to { box-shadow: 0 0 30px red, 0 0 40px gold; }
-        }
+    @keyframes glow {
+      from { box-shadow: 0 0 10px red; }
+      to { box-shadow: 0 0 30px red, 0 0 40px gold; }
+    }
 
-        .footer {
-            margin-top: auto;
-            padding: 20px;
-            font-size: 1rem;
-            color: #aaa;
-        }
-    </style>
+    .footer {
+      margin-top: auto;
+      padding: 20px;
+      font-size: 1rem;
+      color: #aaa;
+    }
+  </style>
 </head>
 <body>
-    <h1>🥋 Karate Shot Prediction</h1>
-    <button id="connectBtn">Connect via Bluetooth</button>
-    <div id="prediction">Waiting for prediction...</div>
+  <h1>🥋 Karate Shot Prediction</h1>
+  <button id="connectBtn">Connect via Bluetooth</button>
+  <div id="prediction">Waiting for prediction...</div>
 
-    <div class="animation-container">
-        <div id="kisamiZukiAnim" class="animation kisamiZuki"></div>
-        <div id="gyakuZukiAnim" class="animation gyakuZuki"></div>
-        <div id="effectRing" class="effect-ring" style="display: none;"></div>
-    </div>
+  <div class="animation-container">
+    <div id="kisamiZukiAnim" class="animation kisamiZuki"></div>
+    <div id="gyakuZukiAnim" class="animation gyakuZuki"></div>
+    <div id="effectRing" class="effect-ring" style="display: none;"></div>
+  </div>
 
-    <div class="footer">
-        Karate Classifier © 2025 | Dojo Mode Enabled
-    </div>
+  <div class="footer">
+    Karate Classifier © 2025 | Dojo Mode Enabled
+  </div>
 
-    <script>
-        let bluetoothDevice;
-        let txCharacteristic;
-        let lastPrediction = "";
-        let isCooldown = false;
-        let bleBuffer = "";
+  <script>
+    let bluetoothDevice;
+    let txCharacteristic;
+    let bleBuffer = "";
+    let lastPrediction = "";
+    let isCooldown = false;
 
-        const UART_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-        const TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+    const UART_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+    const TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
 
-        document.getElementById('connectBtn').addEventListener('click', connectBluetooth);
+    document.getElementById('connectBtn').addEventListener('click', connectBluetooth);
 
-        function connectBluetooth() {
-            navigator.bluetooth.requestDevice({
-                filters: [{ namePrefix: "Nano" }],
-                optionalServices: [UART_SERVICE_UUID]
-            })
-            .then(device => device.gatt.connect())
-            .then(server => server.getPrimaryService(UART_SERVICE_UUID))
-            .then(service => service.getCharacteristic(TX_CHARACTERISTIC_UUID))
-            .then(characteristic => {
-                txCharacteristic = characteristic;
-                return txCharacteristic.startNotifications();
-            })
-            .then(() => {
-                txCharacteristic.addEventListener('characteristicvaluechanged', handleBluetoothData);
-                document.getElementById('prediction').textContent = 'Connected via Bluetooth!';
-            })
-            .catch(error => {
-                console.error('Bluetooth Error:', error);
-                document.getElementById('prediction').textContent = 'Bluetooth Connection Failed';
-            });
+    function connectBluetooth() {
+      console.log("Requesting Bluetooth device...");
+      navigator.bluetooth.requestDevice({
+        filters: [{ namePrefix: "Nano" }],
+        optionalServices: [UART_SERVICE_UUID]
+      })
+      .then(device => {
+        console.log('Device selected:', device.name);
+        bluetoothDevice = device;
+        return device.gatt.connect();
+      })
+      .then(server => {
+        console.log('Connected to GATT server');
+        return server.getPrimaryService(UART_SERVICE_UUID);
+      })
+      .then(service => {
+        console.log('Service found');
+        return service.getCharacteristic(TX_CHARACTERISTIC_UUID);
+      })
+      .then(characteristic => {
+        console.log('Characteristic found');
+        txCharacteristic = characteristic;
+        return txCharacteristic.startNotifications();
+      })
+      .then(() => {
+        console.log('Notifications started');
+        txCharacteristic.addEventListener('characteristicvaluechanged', handleBluetoothData);
+        document.getElementById('prediction').textContent = 'Connected via Bluetooth!';
+      })
+      .catch(error => {
+        console.error('Bluetooth Error:', error);
+        document.getElementById('prediction').textContent = 'Bluetooth Connection Failed';
+      });
+    }
+
+    function handleBluetoothData(event) {
+      const value = new TextDecoder().decode(event.target.value);
+      console.log('Decoded chunk:', value);
+
+      bleBuffer += value;
+
+      if (bleBuffer.includes("Starting inferencing")) {
+        console.log("Full prediction block received:\n", bleBuffer);
+
+        const prediction = extractHighestPrediction(bleBuffer);
+        console.log("Top prediction:", prediction);
+
+        if (prediction && prediction !== lastPrediction && !isCooldown) {
+          document.getElementById('prediction').textContent = prediction;
+          updateUI(prediction);
+          lastPrediction = prediction;
+
+          isCooldown = true;
+          setTimeout(() => { isCooldown = false; }, 2000);
         }
 
-        function handleBluetoothData(event) {
-            const value = new TextDecoder().decode(event.target.value);
-            bleBuffer += value;
+        bleBuffer = ""; // Clear for next prediction cycle
+      }
+    }
 
-            if (bleBuffer.includes("Starting inferencing")) {
-                const prediction = extractHighestPrediction(bleBuffer);
-                bleBuffer = "";
+    function extractHighestPrediction(logText) {
+      const lines = logText.split('\n');
+      let maxProb = -1;
+      let maxLabel = '';
 
-                if (prediction && prediction !== lastPrediction && !isCooldown) {
-                    document.getElementById('prediction').textContent = prediction;
-                    updateUI(prediction);
-                    lastPrediction = prediction;
-
-                    isCooldown = true;
-                    setTimeout(() => isCooldown = false, 2000);
-                }
-            }
+      for (const line of lines) {
+        const match = line.match(/([a-zA-Z]+):\s+([0-9.]+)/);
+        if (match) {
+          const label = match[1];
+          const prob = parseFloat(match[2]);
+          if (prob > maxProb) {
+            maxProb = prob;
+            maxLabel = label;
+          }
         }
+      }
 
-        function extractHighestPrediction(text) {
-            const lines = text.split('\n');
-            let maxLabel = '';
-            let maxVal = -1;
+      return maxLabel;
+    }
 
-            for (let line of lines) {
-                const match = line.match(/([a-zA-Z]+):\s+([0-9.]+)/);
-                if (match) {
-                    const label = match[1];
-                    const value = parseFloat(match[2]);
-                    if (value > maxVal) {
-                        maxVal = value;
-                        maxLabel = label;
-                    }
-                }
-            }
+    function updateUI(prediction) {
+      const kisami = document.getElementById('kisamiZukiAnim');
+      const gyaku = document.getElementById('gyakuZukiAnim');
+      const ring = document.getElementById('effectRing');
 
-            return maxLabel;
-        }
+      kisami.style.display = 'none';
+      gyaku.style.display = 'none';
+      ring.style.display = 'none';
 
-        function updateUI(prediction) {
-            const kisami = document.getElementById('kisamiZukiAnim');
-            const gyaku = document.getElementById('gyakuZukiAnim');
-            const ring = document.getElementById('effectRing');
+      function showAndAnimate(element, soundFile) {
+        element.style.display = 'block';
+        element.style.animation = 'none';
+        void element.offsetWidth; // force reflow
+        element.style.animation = 'fadeInScale 0.8s ease-out forwards';
 
-            kisami.style.display = 'none';
-            gyaku.style.display = 'none';
-            ring.style.display = 'none';
+        ring.style.display = 'block';
+        playSound(soundFile);
 
-            function showAndAnimate(element, soundFile) {
-                element.style.display = 'block';
-                element.style.animation = 'none';
-                void element.offsetWidth; // trigger reflow
-                element.style.animation = 'fadeInScale 0.8s ease-out forwards';
+        setTimeout(() => {
+          element.style.display = 'none';
+          ring.style.display = 'none';
+        }, 2000);
+      }
 
-                ring.style.display = 'block';
-                playSound(soundFile);
+      if (prediction === 'kisamiZuki') {
+        showAndAnimate(kisami, 'kisami.mp3');
+      } else if (prediction === 'gyakuZuki') {
+        showAndAnimate(gyaku, 'gyaku.mp3');
+      }
+    }
 
-                setTimeout(() => {
-                    element.style.display = 'none';
-                    ring.style.display = 'none';
-                }, 2000);
-            }
-
-            if (prediction === 'kisamiZuki') {
-                showAndAnimate(kisami, 'kisami.mp3');
-            } else if (prediction === 'gyakuZuki') {
-                showAndAnimate(gyaku, 'gyaku.mp3');
-            }
-        }
-
-        function playSound(src) {
-            const audio = new Audio(`/static/${src}`);
-            audio.volume = 0.5;
-            audio.play().catch(err => {
-                console.warn("Audio play failed:", err);
-            });
-        }
-    </script>
+    function playSound(src) {
+      const audio = new Audio(`/static/${src}`);
+      audio.volume = 0.5;
+      audio.play().catch(err => {
+        console.warn("Audio play failed:", err);
+      });
+    }
+  </script>
 </body>
 </html>
