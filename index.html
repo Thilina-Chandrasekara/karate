@@ -40,6 +40,7 @@
       color: #00bfff;
       margin-top: 20px;
       font-weight: bold;
+      min-height: 2.5em;
     }
 
     .animation-container {
@@ -168,6 +169,7 @@
 
       bleBuffer += value;
 
+      // Detect end of prediction block: "Starting inferencing" marks new block start
       if (bleBuffer.includes("Starting inferencing")) {
         console.log("Full prediction block received:\n", bleBuffer);
 
@@ -183,7 +185,7 @@
           setTimeout(() => { isCooldown = false; }, 2000);
         }
 
-        bleBuffer = ""; // Clear for next prediction cycle
+        bleBuffer = ""; // Clear buffer for next cycle
       }
     }
 
@@ -193,7 +195,8 @@
       let maxLabel = '';
 
       for (const line of lines) {
-        const match = line.match(/([a-zA-Z]+):\s+([0-9.]+)/);
+        // Match only the known labels (Idle, kisamiZuki, gyakuZuki)
+        const match = line.match(/\b(Idle|kisamiZuki|gyakuZuki):\s*([0-9.]+)/i);
         if (match) {
           const label = match[1];
           const prob = parseFloat(match[2]);
@@ -236,6 +239,7 @@
       } else if (prediction === 'gyakuZuki') {
         showAndAnimate(gyaku, 'gyaku.mp3');
       }
+      // No animation for Idle, just show text
     }
 
     function playSound(src) {
