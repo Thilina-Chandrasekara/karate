@@ -129,7 +129,6 @@
     document.getElementById('connectBtn').addEventListener('click', connectBluetooth);
 
     function connectBluetooth() {
-      console.log("Requesting Bluetooth device...");
       navigator.bluetooth.requestDevice({
         filters: [{ namePrefix: "Nano" }],
         optionalServices: [UART_SERVICE_UUID]
@@ -155,42 +154,30 @@
       const chunk = new TextDecoder().decode(event.target.value);
       bleBuffer += chunk;
 
-      if (
-        bleBuffer.includes("Idle:") &&
-        bleBuffer.includes("kisamiZuki:") &&
-        bleBuffer.includes("gyakuZuki:")
-      ) {
-        const prediction = extractHighestPrediction(bleBuffer);
+      let lines = bleBuffer.split('\n');
+      bleBuffer = lines.pop(); // Keep incomplete last line
+
+      for (let line of lines) {
+        const prediction = extractSinglePrediction(line);
         if (prediction && prediction !== lastPrediction && !isCooldown) {
           document.getElementById('prediction').textContent = prediction;
           updateUI(prediction);
           lastPrediction = prediction;
 
           isCooldown = true;
-          setTimeout(() => { isCooldown = false; }, 1200);
+          setTimeout(() => { isCooldown = false; }, 500); // Lowered cooldown
         }
-
-        bleBuffer = "";
       }
     }
 
-    function extractHighestPrediction(text) {
-      const lines = text.split('\n');
-      let bestLabel = '';
-      let highestProb = -1;
-
-      for (let line of lines) {
-        const match = line.match(/(Idle|kisamiZuki|gyakuZuki):\s*([0-9.]+)/i);
-        if (match) {
-          const label = match[1];
-          const prob = parseFloat(match[2]);
-          if (prob > highestProb) {
-            bestLabel = label;
-            highestProb = prob;
-          }
-        }
+    function extractSinglePrediction(line) {
+      const match = line.match(/(Idle|kisamiZuki|gyakuZuki):\s*([0-9.]+)/i);
+      if (match) {
+        const label = match[1];
+        const prob = parseFloat(match[2]);
+        return prob > 0.6 ? label : null;
       }
-      return bestLabel;
+      return null;
     }
 
     function updateUI(prediction) {
@@ -214,7 +201,7 @@
         setTimeout(() => {
           element.style.display = 'none';
           ring.style.display = 'none';
-        }, 1200);
+        }, 1000);
       }
 
       if (prediction === 'kisamiZuki') {
