@@ -134,26 +134,14 @@
         filters: [{ namePrefix: "Nano" }],
         optionalServices: [UART_SERVICE_UUID]
       })
-      .then(device => {
-        console.log('Device selected:', device.name);
-        bluetoothDevice = device;
-        return device.gatt.connect();
-      })
-      .then(server => {
-        console.log('Connected to GATT server');
-        return server.getPrimaryService(UART_SERVICE_UUID);
-      })
-      .then(service => {
-        console.log('Service found');
-        return service.getCharacteristic(TX_CHARACTERISTIC_UUID);
-      })
+      .then(device => device.gatt.connect())
+      .then(server => server.getPrimaryService(UART_SERVICE_UUID))
+      .then(service => service.getCharacteristic(TX_CHARACTERISTIC_UUID))
       .then(characteristic => {
-        console.log('Characteristic found');
         txCharacteristic = characteristic;
         return txCharacteristic.startNotifications();
       })
       .then(() => {
-        console.log('Notifications started');
         txCharacteristic.addEventListener('characteristicvaluechanged', handleBluetoothData);
         document.getElementById('prediction').textContent = 'Connected via Bluetooth!';
       })
@@ -164,53 +152,45 @@
     }
 
     function handleBluetoothData(event) {
-      const value = new TextDecoder().decode(event.target.value);
-      console.log('Decoded chunk:', value);
+      const chunk = new TextDecoder().decode(event.target.value);
+      bleBuffer += chunk;
 
-      bleBuffer += value;
-
-      // Wait until all expected classes are in the buffer
       if (
         bleBuffer.includes("Idle:") &&
         bleBuffer.includes("kisamiZuki:") &&
         bleBuffer.includes("gyakuZuki:")
       ) {
-        console.log("Prediction block complete:\n", bleBuffer);
-
         const prediction = extractHighestPrediction(bleBuffer);
-        console.log("Top prediction:", prediction);
-
         if (prediction && prediction !== lastPrediction && !isCooldown) {
           document.getElementById('prediction').textContent = prediction;
           updateUI(prediction);
           lastPrediction = prediction;
 
           isCooldown = true;
-          setTimeout(() => { isCooldown = false; }, 1500); // slightly reduced cooldown
+          setTimeout(() => { isCooldown = false; }, 1200);
         }
 
-        bleBuffer = ""; // Clear for next prediction
+        bleBuffer = "";
       }
     }
 
-    function extractHighestPrediction(logText) {
-      const lines = logText.split('\n');
-      let maxProb = -1;
-      let maxLabel = '';
+    function extractHighestPrediction(text) {
+      const lines = text.split('\n');
+      let bestLabel = '';
+      let highestProb = -1;
 
-      for (const line of lines) {
-        const match = line.match(/\b(Idle|kisamiZuki|gyakuZuki):\s*([0-9.]+)/i);
+      for (let line of lines) {
+        const match = line.match(/(Idle|kisamiZuki|gyakuZuki):\s*([0-9.]+)/i);
         if (match) {
           const label = match[1];
           const prob = parseFloat(match[2]);
-          if (prob > maxProb) {
-            maxProb = prob;
-            maxLabel = label;
+          if (prob > highestProb) {
+            bestLabel = label;
+            highestProb = prob;
           }
         }
       }
-
-      return maxLabel;
+      return bestLabel;
     }
 
     function updateUI(prediction) {
@@ -222,10 +202,10 @@
       gyaku.style.display = 'none';
       ring.style.display = 'none';
 
-      function showAndAnimate(element, soundFile) {
+      function animate(element, soundFile) {
         element.style.display = 'block';
         element.style.animation = 'none';
-        void element.offsetWidth; // force reflow
+        void element.offsetWidth;
         element.style.animation = 'fadeInScale 0.8s ease-out forwards';
 
         ring.style.display = 'block';
@@ -234,22 +214,20 @@
         setTimeout(() => {
           element.style.display = 'none';
           ring.style.display = 'none';
-        }, 1500);
+        }, 1200);
       }
 
       if (prediction === 'kisamiZuki') {
-        showAndAnimate(kisami, 'kisami.mp3');
+        animate(kisami, 'kisami.mp3');
       } else if (prediction === 'gyakuZuki') {
-        showAndAnimate(gyaku, 'gyaku.mp3');
+        animate(gyaku, 'gyaku.mp3');
       }
     }
 
     function playSound(src) {
       const audio = new Audio(`/static/${src}`);
       audio.volume = 0.5;
-      audio.play().catch(err => {
-        console.warn("Audio play failed:", err);
-      });
+      audio.play().catch(err => console.warn("Audio play failed:", err));
     }
   </script>
 </body>
