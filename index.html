@@ -225,7 +225,7 @@
     }
 
     function playSound(src) {
-      const audio = new Audio(/static/${src});
+      const audio = new Audio(`/static/${src}`);
       audio.volume = 0.5;
       audio.play().catch(err => console.warn("Audio play failed:", err));
     }
