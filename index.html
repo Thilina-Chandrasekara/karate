@@ -1,108 +1,233 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Karate AI Shot Prediction</title>
+  <meta charset="UTF-8" />
+  <title>Karate Shot Prediction</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to right, #1a1a1a, #333);
+      color: #fff;
       text-align: center;
-      padding: 2rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
-    #connect {
-      padding: 1rem 2rem;
-      font-size: 1.2rem;
+
+    h1 {
+      font-size: 3rem;
+      margin-top: 40px;
+      font-family: 'Impact', sans-serif;
+      color: #ffcc00;
+      text-shadow: 2px 2px #000;
     }
+
+    #connectBtn {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 1.1rem;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
     #prediction {
       font-size: 2rem;
+      color: #00bfff;
+      margin-top: 20px;
       font-weight: bold;
-      margin-top: 2rem;
-      color: #007bff;
+      min-height: 2.5em;
     }
-    #log {
-      margin-top: 2rem;
-      padding: 1rem;
-      background-color: #f9f9f9;
-      border: 1px solid #ddd;
-      height: 200px;
-      overflow-y: auto;
-      text-align: left;
-      font-family: monospace;
+
+    .animation-container {
+      margin-top: 40px;
+      height: 240px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .animation {
+      display: none;
+      margin: 0 auto;
+      width: 220px;
+      height: 220px;
+      background-repeat: no-repeat;
+      background-size: contain;
+      background-position: center;
+      animation: fadeInScale 0.8s ease-out forwards;
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+      border-radius: 12px;
+    }
+
+    .kisamiZuki {
+      background-image: url("static/kisami.gif");
+    }
+
+    .gyakuZuki {
+      background-image: url("static/gyaku.gif");
+    }
+
+    @keyframes fadeInScale {
+      0% { opacity: 0; transform: scale(0.85); }
+      50% { opacity: 1; transform: scale(1.05); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .effect-ring {
+      margin-top: 20px;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      border: 6px solid #ff0000;
+      animation: glow 1s infinite alternate;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    @keyframes glow {
+      from { box-shadow: 0 0 10px red; }
+      to { box-shadow: 0 0 30px red, 0 0 40px gold; }
+    }
+
+    .footer {
+      margin-top: auto;
+      padding: 20px;
+      font-size: 1rem;
+      color: #aaa;
     }
   </style>
 </head>
 <body>
-  <h1>Karate Shot Detector</h1>
-  <button id="connect">Connect to BLE</button>
-  <div id="prediction">No prediction yet</div>
-  <div id="log"></div>
+  <h1>🥋 Karate Shot Prediction</h1>
+  <button id="connectBtn">Connect via Bluetooth</button>
+  <div id="prediction">Waiting for prediction...</div>
+
+  <div class="animation-container">
+    <div id="kisamiZukiAnim" class="animation kisamiZuki"></div>
+    <div id="gyakuZukiAnim" class="animation gyakuZuki"></div>
+    <div id="effectRing" class="effect-ring" style="display: none;"></div>
+  </div>
+
+  <div class="footer">
+    Karate Classifier © 2025 | Dojo Mode Enabled
+  </div>
 
   <script>
-    let bleDevice, bleCharacteristic;
-    let bleBuffer = '';
+    let bluetoothDevice;
+    let txCharacteristic;
+    let bleBuffer = "";
+    let lastPrediction = "";
+    let isCooldown = false;
 
-    const logDiv = document.getElementById('log');
-    const predictionDiv = document.getElementById('prediction');
+    const UART_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+    const TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
 
-    document.getElementById('connect').addEventListener('click', async () => {
-      try {
-        bleDevice = await navigator.bluetooth.requestDevice({
-          filters: [{ services: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e'] }]
-        });
+    document.getElementById('connectBtn').addEventListener('click', connectBluetooth);
 
-        const server = await bleDevice.gatt.connect();
-        const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
-        bleCharacteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
-
-        await bleCharacteristic.startNotifications();
-        bleCharacteristic.addEventListener('characteristicvaluechanged', handleBluetoothData);
-
-        logToConsole("✅ Connected and listening for data...");
-      } catch (error) {
-        console.error(error);
-        logToConsole("❌ Connection failed: " + error);
-      }
-    });
-
-    function handleBluetoothData(event) {
-      const value = new TextDecoder().decode(event.target.value);
-      bleBuffer += value;
-
-      // Split on new lines
-      const lines = bleBuffer.split('\n');
-      bleBuffer = lines.pop(); // Save last incomplete line
-
-      for (let line of lines) {
-        line = line.trim();
-        if (line.length === 0) continue;
-
-        logToConsole(line); // Show full logs
-
-        const prediction = extractPrediction(line);
-        if (prediction) {
-          predictionDiv.textContent = prediction.label;
-          predictionDiv.style.color = "#28a745"; // green
-        }
-      }
+    function connectBluetooth() {
+      console.log("🔗 Requesting Bluetooth device...");
+      navigator.bluetooth.requestDevice({
+        filters: [{ namePrefix: "Nano" }],
+        optionalServices: [UART_SERVICE_UUID]
+      })
+      .then(device => {
+        bluetoothDevice = device;
+        console.log('✅ Device selected:', device.name);
+        return device.gatt.connect();
+      })
+      .then(server => {
+        console.log('🔌 Connected to GATT server');
+        return server.getPrimaryService(UART_SERVICE_UUID);
+      })
+      .then(service => {
+        console.log('📦 Service found');
+        return service.getCharacteristic(TX_CHARACTERISTIC_UUID);
+      })
+      .then(characteristic => {
+        txCharacteristic = characteristic;
+        return txCharacteristic.startNotifications();
+      })
+      .then(() => {
+        console.log('📡 Notifications started');
+        txCharacteristic.addEventListener('characteristicvaluechanged', handleBluetoothData);
+        document.getElementById('prediction').textContent = 'Connected via Bluetooth!';
+      })
+      .catch(error => {
+        console.error('❌ Bluetooth Error:', error);
+        document.getElementById('prediction').textContent = 'Bluetooth Connection Failed';
+      });
     }
 
-    function extractPrediction(line) {
-      // Match one label per line
-      const match = line.match(/(Idle|kisamiZuki|gyakuZuki):\s*([0-9.]+)/i);
+    function handleBluetoothData(event) {
+      const chunk = new TextDecoder().decode(event.target.value);
+      bleBuffer += chunk;
+
+      const lines = bleBuffer.split('\n');
+      bleBuffer = lines.pop(); // Keep incomplete last line
+
+      lines.forEach(line => {
+        const result = extractHighConfidencePrediction(line);
+        if (result && result !== lastPrediction && !isCooldown) {
+          console.log("🎯 New prediction:", result);
+          document.getElementById('prediction').textContent = result;
+          updateUI(result);
+          lastPrediction = result;
+
+          isCooldown = true;
+          setTimeout(() => isCooldown = false, 500); // Faster cooldown
+        }
+      });
+    }
+
+    function extractHighConfidencePrediction(line) {
+      const match = line.match(/\b(Idle|kisamiZuki|gyakuZuki):\s*([0-9.]+)/i);
       if (match) {
         const label = match[1];
-        const confidence = parseFloat(match[2]);
-        if (confidence > 0.6) {
-          return { label, confidence };
-        }
+        const prob = parseFloat(match[2]);
+        console.log(`📊 Detected ${label} with confidence ${prob}`);
+        return prob > 0.6 ? label : null;
       }
       return null;
     }
 
-    function logToConsole(text) {
-      const logLine = document.createElement('div');
-      logLine.textContent = text;
-      logDiv.appendChild(logLine);
-      logDiv.scrollTop = logDiv.scrollHeight; // Auto-scroll
+    function updateUI(prediction) {
+      const kisami = document.getElementById('kisamiZukiAnim');
+      const gyaku = document.getElementById('gyakuZukiAnim');
+      const ring = document.getElementById('effectRing');
+
+      kisami.style.display = 'none';
+      gyaku.style.display = 'none';
+      ring.style.display = 'none';
+
+      function showAnim(element, soundFile) {
+        element.style.display = 'block';
+        element.style.animation = 'none';
+        void element.offsetWidth; // Force reflow
+        element.style.animation = 'fadeInScale 0.8s ease-out forwards';
+        ring.style.display = 'block';
+        playSound(soundFile);
+
+        setTimeout(() => {
+          element.style.display = 'none';
+          ring.style.display = 'none';
+        }, 1000);
+      }
+
+      if (prediction === 'kisamiZuki') {
+        showAnim(kisami, 'kisami.mp3');
+      } else if (prediction === 'gyakuZuki') {
+        showAnim(gyaku, 'gyaku.mp3');
+      }
+    }
+
+    function playSound(src) {
+      const audio = new Audio(`/static/${src}`);
+      audio.volume = 0.5;
+      audio.play().catch(err => console.warn("🔇 Audio failed:", err));
     }
   </script>
 </body>
