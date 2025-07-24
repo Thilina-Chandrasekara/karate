@@ -129,23 +129,35 @@
     document.getElementById('connectBtn').addEventListener('click', connectBluetooth);
 
     function connectBluetooth() {
+      console.log("🔗 Requesting Bluetooth device...");
       navigator.bluetooth.requestDevice({
         filters: [{ namePrefix: "Nano" }],
         optionalServices: [UART_SERVICE_UUID]
       })
-      .then(device => device.gatt.connect())
-      .then(server => server.getPrimaryService(UART_SERVICE_UUID))
-      .then(service => service.getCharacteristic(TX_CHARACTERISTIC_UUID))
+      .then(device => {
+        bluetoothDevice = device;
+        console.log('✅ Device selected:', device.name);
+        return device.gatt.connect();
+      })
+      .then(server => {
+        console.log('🔌 Connected to GATT server');
+        return server.getPrimaryService(UART_SERVICE_UUID);
+      })
+      .then(service => {
+        console.log('📦 Service found');
+        return service.getCharacteristic(TX_CHARACTERISTIC_UUID);
+      })
       .then(characteristic => {
         txCharacteristic = characteristic;
         return txCharacteristic.startNotifications();
       })
       .then(() => {
+        console.log('📡 Notifications started');
         txCharacteristic.addEventListener('characteristicvaluechanged', handleBluetoothData);
         document.getElementById('prediction').textContent = 'Connected via Bluetooth!';
       })
       .catch(error => {
-        console.error('Bluetooth Error:', error);
+        console.error('❌ Bluetooth Error:', error);
         document.getElementById('prediction').textContent = 'Bluetooth Connection Failed';
       });
     }
@@ -155,25 +167,28 @@
       bleBuffer += chunk;
 
       const lines = bleBuffer.split('\n');
-      bleBuffer = lines.pop(); // Keep incomplete line
+      bleBuffer = lines.pop(); // Keep incomplete last line
 
-      for (let line of lines) {
-        const prediction = parseSinglePrediction(line);
-        if (prediction && prediction !== lastPrediction && !isCooldown) {
-          document.getElementById('prediction').textContent = prediction;
-          updateUI(prediction);
-          lastPrediction = prediction;
+      lines.forEach(line => {
+        const result = extractHighConfidencePrediction(line);
+        if (result && result !== lastPrediction && !isCooldown) {
+          console.log("🎯 New prediction:", result);
+          document.getElementById('prediction').textContent = result;
+          updateUI(result);
+          lastPrediction = result;
+
           isCooldown = true;
-          setTimeout(() => { isCooldown = false; }, 800);
+          setTimeout(() => isCooldown = false, 500); // Faster cooldown
         }
-      }
+      });
     }
 
-    function parseSinglePrediction(line) {
+    function extractHighConfidencePrediction(line) {
       const match = line.match(/\b(Idle|kisamiZuki|gyakuZuki):\s*([0-9.]+)/i);
       if (match) {
         const label = match[1];
         const prob = parseFloat(match[2]);
+        console.log(`📊 Detected ${label} with confidence ${prob}`);
         return prob > 0.6 ? label : null;
       }
       return null;
@@ -188,13 +203,14 @@
       gyaku.style.display = 'none';
       ring.style.display = 'none';
 
-      function showAndAnimate(element, soundFile) {
+      function showAnim(element, soundFile) {
         element.style.display = 'block';
         element.style.animation = 'none';
-        void element.offsetWidth;
+        void element.offsetWidth; // Force reflow
         element.style.animation = 'fadeInScale 0.8s ease-out forwards';
         ring.style.display = 'block';
         playSound(soundFile);
+
         setTimeout(() => {
           element.style.display = 'none';
           ring.style.display = 'none';
@@ -202,16 +218,16 @@
       }
 
       if (prediction === 'kisamiZuki') {
-        showAndAnimate(kisami, 'kisami.mp3');
+        showAnim(kisami, 'kisami.mp3');
       } else if (prediction === 'gyakuZuki') {
-        showAndAnimate(gyaku, 'gyaku.mp3');
+        showAnim(gyaku, 'gyaku.mp3');
       }
     }
 
     function playSound(src) {
       const audio = new Audio(`/static/${src}`);
       audio.volume = 0.5;
-      audio.play().catch(err => console.warn("Audio play failed:", err));
+      audio.play().catch(err => console.warn("🔇 Audio failed:", err));
     }
   </script>
 </body>
