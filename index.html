@@ -129,31 +129,18 @@
     document.getElementById('connectBtn').addEventListener('click', connectBluetooth);
 
     function connectBluetooth() {
-      console.log("Requesting Bluetooth device...");
       navigator.bluetooth.requestDevice({
         filters: [{ namePrefix: "Nano" }],
         optionalServices: [UART_SERVICE_UUID]
       })
-      .then(device => {
-        console.log('Device selected:', device.name);
-        bluetoothDevice = device;
-        return device.gatt.connect();
-      })
-      .then(server => {
-        console.log('Connected to GATT server');
-        return server.getPrimaryService(UART_SERVICE_UUID);
-      })
-      .then(service => {
-        console.log('Service found');
-        return service.getCharacteristic(TX_CHARACTERISTIC_UUID);
-      })
+      .then(device => device.gatt.connect())
+      .then(server => server.getPrimaryService(UART_SERVICE_UUID))
+      .then(service => service.getCharacteristic(TX_CHARACTERISTIC_UUID))
       .then(characteristic => {
-        console.log('Characteristic found');
         txCharacteristic = characteristic;
         return txCharacteristic.startNotifications();
       })
       .then(() => {
-        console.log('Notifications started');
         txCharacteristic.addEventListener('characteristicvaluechanged', handleBluetoothData);
         document.getElementById('prediction').textContent = 'Connected via Bluetooth!';
       })
@@ -164,53 +151,32 @@
     }
 
     function handleBluetoothData(event) {
-      const value = new TextDecoder().decode(event.target.value);
-      console.log('Decoded chunk:', value);
+      const chunk = new TextDecoder().decode(event.target.value);
+      bleBuffer += chunk;
 
-      bleBuffer += value;
+      const lines = bleBuffer.split('\n');
+      bleBuffer = lines.pop(); // Keep incomplete line
 
-      // Wait until all expected classes are in the buffer
-      if (
-        bleBuffer.includes("Idle:") &&
-        bleBuffer.includes("kisamiZuki:") &&
-        bleBuffer.includes("gyakuZuki:")
-      ) {
-        console.log("Prediction block complete:\n", bleBuffer);
-
-        const prediction = extractHighestPrediction(bleBuffer);
-        console.log("Top prediction:", prediction);
-
+      for (let line of lines) {
+        const prediction = parseSinglePrediction(line);
         if (prediction && prediction !== lastPrediction && !isCooldown) {
           document.getElementById('prediction').textContent = prediction;
           updateUI(prediction);
           lastPrediction = prediction;
-
           isCooldown = true;
-          setTimeout(() => { isCooldown = false; }, 1500); // slightly reduced cooldown
+          setTimeout(() => { isCooldown = false; }, 800);
         }
-
-        bleBuffer = ""; // Clear for next prediction
       }
     }
 
-    function extractHighestPrediction(logText) {
-      const lines = logText.split('\n');
-      let maxProb = -1;
-      let maxLabel = '';
-
-      for (const line of lines) {
-        const match = line.match(/\b(Idle|kisamiZuki|gyakuZuki):\s*([0-9.]+)/i);
-        if (match) {
-          const label = match[1];
-          const prob = parseFloat(match[2]);
-          if (prob > maxProb) {
-            maxProb = prob;
-            maxLabel = label;
-          }
-        }
+    function parseSinglePrediction(line) {
+      const match = line.match(/\b(Idle|kisamiZuki|gyakuZuki):\s*([0-9.]+)/i);
+      if (match) {
+        const label = match[1];
+        const prob = parseFloat(match[2]);
+        return prob > 0.6 ? label : null;
       }
-
-      return maxLabel;
+      return null;
     }
 
     function updateUI(prediction) {
@@ -225,16 +191,14 @@
       function showAndAnimate(element, soundFile) {
         element.style.display = 'block';
         element.style.animation = 'none';
-        void element.offsetWidth; // force reflow
+        void element.offsetWidth;
         element.style.animation = 'fadeInScale 0.8s ease-out forwards';
-
         ring.style.display = 'block';
         playSound(soundFile);
-
         setTimeout(() => {
           element.style.display = 'none';
           ring.style.display = 'none';
-        }, 1500);
+        }, 1000);
       }
 
       if (prediction === 'kisamiZuki') {
@@ -247,9 +211,7 @@
     function playSound(src) {
       const audio = new Audio(`/static/${src}`);
       audio.volume = 0.5;
-      audio.play().catch(err => {
-        console.warn("Audio play failed:", err);
-      });
+      audio.play().catch(err => console.warn("Audio play failed:", err));
     }
   </script>
 </body>
